@@ -1,0 +1,111 @@
+// Prisma schema defining data models for the political program monitor.
+// Run `npx prisma generate` to generate the client.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Party {
+  id         Int       @id @default(autoincrement())
+  name       String
+  slug       String    @unique
+  term       String?
+  colors     Json?
+  logoUrl    String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  program    ProgramPoint[]
+  mps        MP[]
+}
+
+model ProgramPoint {
+  id          Int      @id @default(autoincrement())
+  partyId     Int
+  title       String
+  text        String
+  topic       String
+  priority    Int
+  promises    Promise[]
+  party       Party    @relation(fields: [partyId], references: [id])
+}
+
+model Promise {
+  id            Int      @id @default(autoincrement())
+  programPointId Int
+  metric        String
+  target        String
+  dueDate       DateTime?
+  status        PromiseStatus
+  statusReason  String?
+  evidence      Evidence[]
+  history       StatusHistory[]
+  programPoint  ProgramPoint @relation(fields: [programPointId], references: [id])
+}
+
+model Evidence {
+  id         Int      @id @default(autoincrement())
+  promiseId  Int
+  sourceUrl  String
+  snippet    String
+  capturedAt DateTime
+  promise    Promise  @relation(fields: [promiseId], references: [id])
+}
+
+model StatusHistory {
+  id         Int       @id @default(autoincrement())
+  promiseId  Int
+  status     PromiseStatus
+  reason     String?
+  timestamp  DateTime  @default(now())
+  promise    Promise   @relation(fields: [promiseId], references: [id])
+}
+
+model Bill {
+  id         Int       @id @default(autoincrement())
+  pspId      String    @unique
+  title      String
+  stage      String
+  topic      String
+  url        String?
+  votes      Vote[]
+}
+
+model Vote {
+  id        Int      @id @default(autoincrement())
+  billId    Int
+  date      DateTime
+  result    String
+  mpVotes   MPVote[]
+  bill      Bill     @relation(fields: [billId], references: [id])
+}
+
+model MP {
+  id        Int      @id @default(autoincrement())
+  name      String
+  partyId   Int
+  party     Party    @relation(fields: [partyId], references: [id])
+  votes     MPVote[]
+}
+
+model MPVote {
+  id      Int   @id @default(autoincrement())
+  voteId  Int
+  mpId    Int
+  choice  String
+  vote    Vote  @relation(fields: [voteId], references: [id])
+  mp      MP    @relation(fields: [mpId], references: [id])
+}
+
+enum PromiseStatus {
+  UNASSESSED
+  IN_PROGRESS
+  PARTIALLY_FULFILLED
+  FULFILLED
+  BROKEN
+  IMPOSSIBLE
+}
